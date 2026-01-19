@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import { 
   Car, Tent, Camera, Wrench, Music, Bike, 
-  Laptop, Sofa, Shirt, Gamepad, Dumbbell, ChefHat 
+  Laptop, Sofa, Shirt, Gamepad, Dumbbell, ChefHat,
+  Home, Briefcase
 } from "lucide-react";
 
 const categories = [
+  { id: "property", name: "Property", icon: Home, color: "bg-emerald-500/10 text-emerald-600" },
+  { id: "services", name: "Services", icon: Briefcase, color: "bg-sky-500/10 text-sky-600" },
   { id: "vehicles", name: "Vehicles", icon: Car, color: "bg-blue-500/10 text-blue-600" },
   { id: "camping", name: "Camping", icon: Tent, color: "bg-green-500/10 text-green-600" },
   { id: "photography", name: "Photography", icon: Camera, color: "bg-purple-500/10 text-purple-600" },

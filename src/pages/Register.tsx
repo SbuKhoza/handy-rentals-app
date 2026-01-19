@@ -1,17 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, Phone, User } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const Register = () => {
-  const [mode, setMode] = useState<"email" | "phone">("phone");
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
     password: "",
   });
 
@@ -42,32 +39,6 @@ const Register = () => {
 
           {/* Card */}
           <div className="bg-card rounded-2xl p-6 md:p-8 border border-border shadow-card">
-            {/* Mode Toggle */}
-            <div className="flex gap-2 p-1 bg-muted rounded-xl mb-6">
-              <button
-                onClick={() => setMode("phone")}
-                className={cn(
-                  "flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  mode === "phone"
-                    ? "bg-card shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Phone (Preferred)
-              </button>
-              <button
-                onClick={() => setMode("email")}
-                className={cn(
-                  "flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  mode === "email"
-                    ? "bg-card shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Email
-              </button>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name */}
               <div>
@@ -87,77 +58,53 @@ const Register = () => {
                 </div>
               </div>
 
-              {mode === "phone" ? (
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => updateField("phone", e.target.value)}
-                      placeholder="+27 12 345 6789"
-                      className="w-full pl-12 pr-4 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
-                      required
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    We'll send you a verification code via SMS
-                  </p>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => updateField("email", e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full pl-12 pr-4 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
+                    required
+                  />
                 </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Email
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => updateField("email", e.target.value)}
-                        placeholder="you@example.com"
-                        className="w-full pl-12 pr-4 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
-                        required
-                      />
-                    </div>
-                  </div>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={formData.password}
-                        onChange={(e) => updateField("password", e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-12 pr-12 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
-                        required
-                        minLength={8}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Must be at least 8 characters
-                    </p>
-                  </div>
-                </>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => updateField("password", e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-12 pr-12 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Must be at least 8 characters
+                </p>
+              </div>
 
               <Button type="submit" variant="teal" size="lg" className="w-full">
-                {mode === "phone" ? "Send Verification Code" : "Create Account"}
+                Create Account
               </Button>
             </form>
 

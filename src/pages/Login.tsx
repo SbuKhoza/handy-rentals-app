@@ -1,18 +1,59 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login - will integrate with backend
-    console.log("Login:", { email, password });
+    setLoading(true);
+    
+    try {
+      await signIn(email, password);
+      toast.success("Welcome back!");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      if (error.code === "auth/user-not-found") {
+        toast.error("No account found with this email");
+      } else if (error.code === "auth/wrong-password") {
+        toast.error("Incorrect password");
+      } else if (error.code === "auth/invalid-credential") {
+        toast.error("Invalid email or password");
+      } else {
+        toast.error("Failed to sign in. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      toast.success("Welcome!");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      if (error.code === "auth/popup-closed-by-user") {
+        // User closed popup, no need to show error
+      } else {
+        toast.error("Failed to sign in with Google");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,6 +87,7 @@ const Login = () => {
                     placeholder="you@example.com"
                     className="w-full pl-12 pr-4 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -63,6 +105,7 @@ const Login = () => {
                     placeholder="••••••••"
                     className="w-full pl-12 pr-12 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -80,8 +123,8 @@ const Login = () => {
                 </Link>
               </div>
 
-              <Button type="submit" variant="teal" size="lg" className="w-full">
-                Sign In
+              <Button type="submit" variant="teal" size="lg" className="w-full" disabled={loading}>
+                {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 
@@ -93,7 +136,13 @@ const Login = () => {
             </div>
 
             {/* Social Login */}
-            <Button variant="outline" size="lg" className="w-full">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="w-full" 
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"

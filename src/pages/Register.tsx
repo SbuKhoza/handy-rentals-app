@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -11,11 +13,50 @@ const Register = () => {
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
+  const { signUp, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle registration - will integrate with Firebase
-    console.log("Register:", formData);
+    setLoading(true);
+    
+    try {
+      await signUp(formData.email, formData.password, formData.name);
+      toast.success("Account created successfully!");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      if (error.code === "auth/email-already-in-use") {
+        toast.error("An account with this email already exists");
+      } else if (error.code === "auth/weak-password") {
+        toast.error("Password should be at least 6 characters");
+      } else if (error.code === "auth/invalid-email") {
+        toast.error("Please enter a valid email address");
+      } else {
+        toast.error("Failed to create account. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      toast.success("Welcome!");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      if (error.code === "auth/popup-closed-by-user") {
+        // User closed popup, no need to show error
+      } else {
+        toast.error("Failed to sign in with Google");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateField = (field: string, value: string) => {
@@ -54,6 +95,7 @@ const Register = () => {
                     placeholder="John Doe"
                     className="w-full pl-12 pr-4 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -71,6 +113,7 @@ const Register = () => {
                     placeholder="you@example.com"
                     className="w-full pl-12 pr-4 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -89,6 +132,7 @@ const Register = () => {
                     className="w-full pl-12 pr-12 py-3 bg-muted rounded-xl border border-border focus:border-secondary focus:outline-none transition-colors"
                     required
                     minLength={8}
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -103,8 +147,8 @@ const Register = () => {
                 </p>
               </div>
 
-              <Button type="submit" variant="teal" size="lg" className="w-full">
-                Create Account
+              <Button type="submit" variant="teal" size="lg" className="w-full" disabled={loading}>
+                {loading ? "Creating account..." : "Create Account"}
               </Button>
             </form>
 
@@ -116,7 +160,13 @@ const Register = () => {
             </div>
 
             {/* Social Login */}
-            <Button variant="outline" size="lg" className="w-full">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="w-full"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"

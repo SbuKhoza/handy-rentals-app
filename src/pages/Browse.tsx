@@ -1,149 +1,146 @@
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { LayoutGrid, List } from "lucide-react";
-import Layout from "@/components/layout/Layout";
-import SearchFilters from "@/components/listings/SearchFilters";
-import ListingCard from "@/components/listings/ListingCard";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+'use client';
 
-// Mock data
-const allListings = [
-  {
-    id: "1",
-    title: "Professional DJ Equipment Set",
-    type: "item" as const,
-    category: "Music & Audio",
-    price: 850,
-    priceUnit: "day",
-    location: "Johannesburg, Sandton",
-    rating: 4.9,
-    reviews: 28,
-    image: "https://images.unsplash.com/photo-1571266028243-e4733b0f0bb0?w=600&h=400&fit=crop",
-    owner: { name: "Marcus T.", avatar: "https://i.pravatar.cc/100?img=11" },
-  },
-  {
-    id: "2",
-    title: "4x4 Camping Trailer with Tent",
-    type: "item" as const,
-    category: "Camping",
-    price: 650,
-    priceUnit: "day",
-    location: "Cape Town, Century City",
-    rating: 4.8,
-    reviews: 45,
-    image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&h=400&fit=crop",
-    owner: { name: "Sarah M.", avatar: "https://i.pravatar.cc/100?img=5" },
-  },
-  {
-    id: "3",
-    title: "Canon EOS R5 Camera Kit",
-    type: "item" as const,
-    category: "Photography",
-    price: 1200,
-    priceUnit: "day",
-    location: "Durban, Umhlanga",
-    rating: 5.0,
-    reviews: 19,
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=400&fit=crop",
-    owner: { name: "James K.", avatar: "https://i.pravatar.cc/100?img=12" },
-  },
-  {
-    id: "4",
-    title: "Professional Pressure Washer",
-    type: "item" as const,
-    category: "Tools",
-    price: 350,
-    priceUnit: "day",
-    location: "Pretoria, Menlyn",
-    rating: 4.7,
-    reviews: 32,
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop",
-    owner: { name: "Peter V.", avatar: "https://i.pravatar.cc/100?img=8" },
-  },
-  {
-    id: "5",
-    title: "Event Photography Services",
-    type: "service" as const,
-    category: "Photography",
-    price: 2500,
-    priceUnit: "event",
-    location: "Johannesburg, Rosebank",
-    rating: 4.9,
-    reviews: 67,
-    image: "https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=600&h=400&fit=crop",
-    owner: { name: "Lisa N.", avatar: "https://i.pravatar.cc/100?img=9" },
-  },
-  {
-    id: "6",
-    title: "Mobile DJ & MC Services",
-    type: "service" as const,
-    category: "Music & Audio",
-    price: 3500,
-    priceUnit: "event",
-    location: "Cape Town, Claremont",
-    rating: 4.8,
-    reviews: 89,
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=400&fit=crop",
-    owner: { name: "David O.", avatar: "https://i.pravatar.cc/100?img=15" },
-  },
-  {
-    id: "7",
-    title: "Mountain Bike - Trek Fuel EX",
-    type: "item" as const,
-    category: "Sports",
-    price: 400,
-    priceUnit: "day",
-    location: "Stellenbosch",
-    rating: 4.6,
-    reviews: 23,
-    image: "https://images.unsplash.com/photo-1544191696-102dbdaeeaa0?w=600&h=400&fit=crop",
-    owner: { name: "Andre P.", avatar: "https://i.pravatar.cc/100?img=13" },
-  },
-  {
-    id: "8",
-    title: "Projector & Screen Set",
-    type: "item" as const,
-    category: "Electronics",
-    price: 500,
-    priceUnit: "day",
-    location: "Johannesburg, Fourways",
-    rating: 4.9,
-    reviews: 41,
-    image: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&h=400&fit=crop",
-    owner: { name: "Thandi M.", avatar: "https://i.pravatar.cc/100?img=16" },
-  },
-  {
-    id: "9",
-    title: "Personal Training Sessions",
-    type: "service" as const,
-    category: "Fitness",
-    price: 450,
-    priceUnit: "session",
-    location: "Cape Town, Sea Point",
-    rating: 5.0,
-    reviews: 56,
-    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600&h=400&fit=crop",
-    owner: { name: "Mike R.", avatar: "https://i.pravatar.cc/100?img=3" },
-  },
-];
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { LayoutGrid, List, Loader2 } from "lucide-react";
+import Layout from "../components/layout/Layout";
+import SearchFilters from "../components/listings/SearchFilters";
+import ListingCard from "../components/listings/ListingCard";
+import { Button } from "../components/ui/button";
+import { cn } from "../lib/utils";
+import { useFirestoreCollection } from "../hooks/useFirestoreCollection";
+import { useFirestoreCRUD, orderBy, where } from "../hooks/useFirestoreCRUD";
+import type { Listing, Category } from "../types";
 
 const Browse = () => {
   const [searchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [listings] = useState(allListings);
+  const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const initialQuery = searchParams.get("q") || "";
   const initialCategory = searchParams.get("category") || "";
+
+  // Fetch listings from Firestore with real-time updates
+  const { 
+    data: listings, 
+    loading: listingsLoading, 
+    error: listingsError 
+  } = useFirestoreCollection<Listing>({
+    collectionName: "listings",
+    constraints: [orderBy("createdAt", "desc")],
+    realtime: true,
+  });
+
+  // Fetch categories for filtering
+  const categoriesApi = useFirestoreCRUD<Category>({ collectionName: "categories" });
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await categoriesApi.getAll([orderBy("order", "asc")]);
+        setCategories(data);
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Filter listings based on search params
+  useEffect(() => {
+    let filtered = [...listings];
+
+    // Filter by search query
+    if (initialQuery) {
+      const query = initialQuery.toLowerCase();
+      filtered = filtered.filter(
+        (listing) =>
+          listing.title.toLowerCase().includes(query) ||
+          listing.description?.toLowerCase().includes(query) ||
+          listing.category.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by category
+    if (initialCategory) {
+      filtered = filtered.filter(
+        (listing) =>
+          listing.category.toLowerCase() === initialCategory.toLowerCase() ||
+          listing.categoryId === initialCategory
+      );
+    }
+
+    // Only show active listings
+    filtered = filtered.filter(
+      (listing) => !listing.status || listing.status === "active"
+    );
+
+    setFilteredListings(filtered);
+  }, [listings, initialQuery, initialCategory]);
+
+  const handleSearch = (query: string) => {
+    const searchLower = query.toLowerCase();
+    const filtered = listings.filter(
+      (listing) =>
+        listing.title.toLowerCase().includes(searchLower) ||
+        listing.description?.toLowerCase().includes(searchLower)
+    );
+    setFilteredListings(filtered);
+  };
+
+  const handleFiltersChange = (filters: {
+    type?: string;
+    priceRange?: [number, number];
+    category?: string;
+  }) => {
+    let filtered = [...listings];
+
+    if (filters.type && filters.type !== "all") {
+      filtered = filtered.filter((listing) => listing.type === filters.type);
+    }
+
+    if (filters.category && filters.category !== "all") {
+      filtered = filtered.filter(
+        (listing) =>
+          listing.category === filters.category ||
+          listing.categoryId === filters.category
+      );
+    }
+
+    if (filters.priceRange) {
+      filtered = filtered.filter(
+        (listing) =>
+          listing.price >= filters.priceRange![0] &&
+          listing.price <= filters.priceRange![1]
+      );
+    }
+
+    setFilteredListings(filtered);
+  };
+
+  if (listingsError) {
+    return (
+      <Layout>
+        <div className="pt-16 md:pt-20 min-h-screen bg-background">
+          <div className="container mx-auto px-4 py-8 text-center">
+            <p className="text-destructive">
+              Failed to load listings. Please try again later.
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
       <div className="pt-16 md:pt-20 min-h-screen bg-background">
         {/* Search & Filters */}
         <SearchFilters
-          onSearch={(query) => console.log("Search:", query)}
+          onSearch={handleSearch}
           onLocationChange={(location) => console.log("Location:", location)}
-          onFiltersChange={(filters) => console.log("Filters:", filters)}
+          onFiltersChange={handleFiltersChange}
         />
 
         {/* Results */}
@@ -152,10 +149,15 @@ const Browse = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-                {initialQuery ? `Results for "${initialQuery}"` : "All Listings"}
+                {initialQuery
+                  ? `Results for "${initialQuery}"`
+                  : initialCategory
+                  ? `${initialCategory} Listings`
+                  : "All Listings"}
               </h1>
               <p className="text-muted-foreground">
-                {listings.length} {listings.length === 1 ? "listing" : "listings"} found
+                {filteredListings.length}{" "}
+                {filteredListings.length === 1 ? "listing" : "listings"} found
               </p>
             </div>
 
@@ -165,7 +167,9 @@ const Browse = () => {
                 onClick={() => setViewMode("grid")}
                 className={cn(
                   "p-2 rounded-md transition-colors",
-                  viewMode === "grid" ? "bg-card shadow-sm" : "hover:bg-card/50"
+                  viewMode === "grid"
+                    ? "bg-card shadow-sm"
+                    : "hover:bg-card/50"
                 )}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -174,7 +178,9 @@ const Browse = () => {
                 onClick={() => setViewMode("list")}
                 className={cn(
                   "p-2 rounded-md transition-colors",
-                  viewMode === "list" ? "bg-card shadow-sm" : "hover:bg-card/50"
+                  viewMode === "list"
+                    ? "bg-card shadow-sm"
+                    : "hover:bg-card/50"
                 )}
               >
                 <List className="w-4 h-4" />
@@ -182,24 +188,63 @@ const Browse = () => {
             </div>
           </div>
 
-          {/* Listings Grid */}
-          <div className={cn(
-            "grid gap-6 pb-24",
-            viewMode === "grid" 
-              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-              : "grid-cols-1 max-w-3xl"
-          )}>
-            {listings.map((listing) => (
-              <ListingCard key={listing.id} {...listing} />
-            ))}
-          </div>
+          {/* Loading State */}
+          {listingsLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">
+                Loading listings...
+              </span>
+            </div>
+          ) : filteredListings.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-muted-foreground mb-4">No listings found</p>
+              <p className="text-sm text-muted-foreground">
+                Try adjusting your search or filters
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Listings Grid */}
+              <div
+                className={cn(
+                  "grid gap-6 pb-24",
+                  viewMode === "grid"
+                    ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                    : "grid-cols-1 max-w-3xl"
+                )}
+              >
+                {filteredListings.map((listing) => (
+                  <ListingCard
+                    key={listing.id}
+                    id={listing.id || ""}
+                    title={listing.title}
+                    type={listing.type}
+                    category={listing.category}
+                    price={listing.price}
+                    priceUnit={listing.priceUnit}
+                    location={listing.location}
+                    rating={listing.rating || 0}
+                    reviews={listing.reviews || 0}
+                    image={listing.images?.[0] || "/placeholder.jpg"}
+                    owner={{
+                      name: listing.ownerName || "Owner",
+                      avatar: listing.ownerAvatar,
+                    }}
+                  />
+                ))}
+              </div>
 
-          {/* Load More */}
-          <div className="text-center py-8">
-            <Button variant="outline" size="lg">
-              Load More Listings
-            </Button>
-          </div>
+              {/* Load More - could implement pagination */}
+              {filteredListings.length >= 12 && (
+                <div className="text-center py-8">
+                  <Button variant="outline" size="lg">
+                    Load More Listings
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </Layout>

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Plus, LogOut, User } from "lucide-react";
+import { Menu, X, Plus, LogOut, User, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,10 +8,20 @@ import { toast } from "sonner";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const navLinks = [
     { href: "/browse", label: "Browse" },
@@ -28,11 +38,21 @@ const Header = () => {
     }
   };
 
+  const getHeaderBg = () => {
+    if (isHome && isScrolled) {
+      return "bg-secondary/95 backdrop-blur-md border-b border-secondary/50";
+    }
+    if (isHome) {
+      return "bg-transparent";
+    }
+    return "bg-card/95 backdrop-blur-md border-b border-border";
+  };
+
   return (
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        isHome ? "bg-transparent" : "bg-card/95 backdrop-blur-md border-b border-border"
+        getHeaderBg()
       )}
     >
       <div className="container mx-auto px-4">
@@ -44,7 +64,7 @@ const Header = () => {
             </div>
             <span
               className={cn(
-                "font-bold text-xl md:text-2xl",
+                "font-bold text-xl md:text-2xl transition-colors",
                 isHome ? "text-white" : "text-foreground"
               )}
             >
@@ -72,12 +92,25 @@ const Header = () => {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <div className="flex items-center gap-2 mr-2">
+                <Link
+                  to="/wallet"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-secondary",
+                    isHome ? "text-white/80 hover:text-white" : "text-muted-foreground"
+                  )}
+                >
+                  <Wallet className="w-4 h-4" />
+                  Wallet
+                </Link>
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2"
+                >
                   {user.photoURL ? (
                     <img
                       src={user.photoURL}
                       alt={user.displayName || "User"}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className="w-8 h-8 rounded-full object-cover border-2 border-secondary/50"
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
@@ -85,12 +118,12 @@ const Header = () => {
                     </div>
                   )}
                   <span className={cn(
-                    "text-sm font-medium",
+                    "text-sm font-medium transition-colors",
                     isHome ? "text-white" : "text-foreground"
                   )}>
                     {user.displayName || user.email?.split("@")[0]}
                   </span>
-                </div>
+                </Link>
                 <Button
                   variant={isHome ? "heroOutline" : "outline"}
                   size="sm"
@@ -152,7 +185,11 @@ const Header = () => {
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
                 {user ? (
                   <>
-                    <div className="flex items-center gap-2 py-2">
+                    <Link
+                      to="/profile"
+                      className="flex items-center gap-2 py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       {user.photoURL ? (
                         <img
                           src={user.photoURL}
@@ -167,7 +204,15 @@ const Header = () => {
                       <span className="font-medium">
                         {user.displayName || user.email?.split("@")[0]}
                       </span>
-                    </div>
+                    </Link>
+                    <Link
+                      to="/wallet"
+                      className="flex items-center gap-2 py-2 text-foreground"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Wallet className="w-5 h-5" />
+                      <span className="font-medium">Wallet</span>
+                    </Link>
                     <Button variant="outline" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>
                       <LogOut className="w-4 h-4 mr-2" />
                       Logout

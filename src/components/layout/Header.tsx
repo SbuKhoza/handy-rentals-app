@@ -1,18 +1,32 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Search, User, MessageCircle, Coins, Plus } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, Plus, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === "/";
+  const { user, logout } = useAuth();
 
   const navLinks = [
     { href: "/browse", label: "Browse" },
     { href: "/how-it-works", label: "How it Works" },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Logged out successfully");
+      navigate("/");
+    } catch (error) {
+      toast.error("Failed to logout");
+    }
+  };
 
   return (
     <header
@@ -56,13 +70,45 @@ const Header = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-3">
-            <Button
-              variant={isHome ? "heroOutline" : "outline"}
-              size="sm"
-              asChild
-            >
-              <Link to="/login">Sign In</Link>
-            </Button>
+            {user ? (
+              <>
+                <div className="flex items-center gap-2 mr-2">
+                  {user.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt={user.displayName || "User"}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                      <User className="w-4 h-4 text-secondary-foreground" />
+                    </div>
+                  )}
+                  <span className={cn(
+                    "text-sm font-medium",
+                    isHome ? "text-white" : "text-foreground"
+                  )}>
+                    {user.displayName || user.email?.split("@")[0]}
+                  </span>
+                </div>
+                <Button
+                  variant={isHome ? "heroOutline" : "outline"}
+                  size="sm"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant={isHome ? "heroOutline" : "outline"}
+                size="sm"
+                asChild
+              >
+                <Link to="/login">Sign In</Link>
+              </Button>
+            )}
             <Button
               variant={isHome ? "hero" : "teal"}
               size="sm"
@@ -104,11 +150,36 @@ const Header = () => {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <Button variant="outline" asChild>
-                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                    Sign In
-                  </Link>
-                </Button>
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-2 py-2">
+                      {user.photoURL ? (
+                        <img
+                          src={user.photoURL}
+                          alt={user.displayName || "User"}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                          <User className="w-4 h-4 text-secondary-foreground" />
+                        </div>
+                      )}
+                      <span className="font-medium">
+                        {user.displayName || user.email?.split("@")[0]}
+                      </span>
+                    </div>
+                    <Button variant="outline" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" asChild>
+                    <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                      Sign In
+                    </Link>
+                  </Button>
+                )}
                 <Button variant="teal" asChild>
                   <Link to="/create-listing" onClick={() => setIsMenuOpen(false)}>
                     <Plus className="w-4 h-4" />

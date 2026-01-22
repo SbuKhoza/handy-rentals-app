@@ -64,7 +64,7 @@ const CTASection = () => {
             </div>
 
             <Button variant="hero" className="w-full" size="lg" asChild>
-              <Link to="/wallet">
+              <Link to="/buy-tokens">
                 <Coins className="w-5 h-5" />
                 Buy Tokens
               </Link>

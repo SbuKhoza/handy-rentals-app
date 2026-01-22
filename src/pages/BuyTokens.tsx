@@ -35,7 +35,7 @@ const TOKEN_PACKAGES: TokenPackage[] = [
   { id: "value", tokens: 100, price: 8000 },
 ];
 
-const PAYSTACK_PUBLIC_KEY = "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // Replace with actual key
+const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
 const BuyTokens = () => {
   const navigate = useNavigate();

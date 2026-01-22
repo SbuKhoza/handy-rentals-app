@@ -14,6 +14,7 @@ import CreateListing from "./pages/CreateListing";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Wallet from "./pages/Wallet";
+import BuyTokens from "./pages/BuyTokens";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/messages" element={<Messages />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/wallet" element={<Wallet />} />
+            <Route path="/buy-tokens" element={<BuyTokens />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

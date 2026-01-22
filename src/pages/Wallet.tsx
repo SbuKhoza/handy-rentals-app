@@ -54,9 +54,11 @@ const Wallet = () => {
                 </div>
               </div>
             </div>
-            <Button variant="outline" className="w-full bg-secondary-foreground/10 border-secondary-foreground/30 text-secondary-foreground hover:bg-secondary-foreground/20">
-              <Plus className="w-4 h-4 mr-2" />
-              Buy More Tokens
+            <Button variant="outline" className="w-full bg-secondary-foreground/10 border-secondary-foreground/30 text-secondary-foreground hover:bg-secondary-foreground/20" asChild>
+              <Link to="/buy-tokens">
+                <Plus className="w-4 h-4 mr-2" />
+                Buy More Tokens
+              </Link>
             </Button>
           </div>
 

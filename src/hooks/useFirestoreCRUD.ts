@@ -28,8 +28,8 @@ interface UseFirestoreCRUDOptions {
 
 interface BaseDocument {
   id?: string;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
 }
 
 export function useFirestoreCRUD<T extends BaseDocument>({

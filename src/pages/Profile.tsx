@@ -708,7 +708,7 @@ const Profile = () => {
       }
 
       // Delete the listing document
-      await listingsApi.delete(listing.id);
+      await listingsApi.remove(listing.id);
     } catch (error) {
       console.error("Error deleting listing:", error);
       alert("Failed to delete listing. Please try again.");
@@ -813,7 +813,10 @@ const Profile = () => {
                           user.metadata.creationTime
                         ).toLocaleDateString()
                       : userProfile?.createdAt
-                        ? userProfile.createdAt.toDate().toLocaleDateString()
+                        ? (userProfile.createdAt instanceof Date 
+                            ? userProfile.createdAt 
+                            : userProfile.createdAt.toDate()
+                          ).toLocaleDateString()
                         : "Recently"}
                   </span>
                 </div>

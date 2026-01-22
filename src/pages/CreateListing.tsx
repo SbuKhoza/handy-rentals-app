@@ -3,7 +3,7 @@
 import React from "react"
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Camera, Loader2, X } from "lucide-react";
+import { Upload, Camera, Loader2, X, Coins, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFirestoreCRUD, orderBy } from "@/hooks/useFirestoreCRUD";
-import { Category, Listing } from "@/types";
+import { Category, Listing, TokenWallet, TokenTransaction } from "@/types";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from "sonner";
+
+const LISTING_DURATION_OPTIONS = [
+  { days: 30, tokens: 1, label: "30 days" },
+  { days: 60, tokens: 2, label: "60 days" },
+  { days: 90, tokens: 3, label: "90 days" },
+];
 
 const CreateListing = () => {
   const navigate = useNavigate();
@@ -32,6 +38,9 @@ const CreateListing = () => {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [tokenBalance, setTokenBalance] = useState(0);
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [selectedDuration, setSelectedDuration] = useState(LISTING_DURATION_OPTIONS[0]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -49,6 +58,8 @@ const CreateListing = () => {
   const listingsApi = useFirestoreCRUD<Listing>({
     collectionName: "listings",
   });
+  const walletApi = useFirestoreCRUD<TokenWallet>({ collectionName: "wallets" });
+  const transactionsApi = useFirestoreCRUD<TokenTransaction>({ collectionName: "tokenTransactions" });
 
   // Fetch categories from Firestore
   useEffect(() => {
@@ -65,6 +76,25 @@ const CreateListing = () => {
     };
     fetchCategories();
   }, []);
+
+  // Fetch wallet balance
+  useEffect(() => {
+    const fetchWallet = async () => {
+      if (!user) {
+        setWalletLoading(false);
+        return;
+      }
+      try {
+        const wallet = await walletApi.getById(user.uid);
+        setTokenBalance(wallet?.balance || 0);
+      } catch (error) {
+        console.error("Error fetching wallet:", error);
+      } finally {
+        setWalletLoading(false);
+      }
+    };
+    fetchWallet();
+  }, [user]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -125,6 +155,12 @@ const CreateListing = () => {
       return;
     }
 
+    // Check token balance
+    if (tokenBalance < selectedDuration.tokens) {
+      toast.error(`You need ${selectedDuration.tokens} token(s) to create a ${selectedDuration.label} listing`);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -136,6 +172,30 @@ const CreateListing = () => {
         (c) => c.id === formData.categoryId
       );
 
+      // Calculate expiry date
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + selectedDuration.days);
+
+      // Deduct tokens from wallet
+      const wallet = await walletApi.getById(user.uid);
+      if (!wallet || wallet.balance < selectedDuration.tokens) {
+        toast.error("Insufficient tokens");
+        setLoading(false);
+        return;
+      }
+
+      await walletApi.update(user.uid, {
+        balance: wallet.balance - selectedDuration.tokens,
+      });
+
+      // Record transaction
+      await transactionsApi.create({
+        userId: user.uid,
+        type: "debit",
+        amount: selectedDuration.tokens,
+        description: `Listing Fee - ${formData.title} (${selectedDuration.label})`,
+      });
+
       // Create listing document
       const listingData: Omit<Listing, "id"> = {
         title: formData.title,
@@ -144,7 +204,7 @@ const CreateListing = () => {
         category: selectedCategory?.name || "",
         categoryId: formData.categoryId,
         price: parseFloat(formData.price),
-        priceUnit: formData.priceUnit as "hour" | "day" | "week" | "event" | "session",
+        priceUnit: formData.priceUnit,
         location: formData.location,
         images: imageUrls,
         ownerId: user.uid,
@@ -171,6 +231,8 @@ const CreateListing = () => {
     return null;
   }
 
+  const hasEnoughTokens = tokenBalance >= selectedDuration.tokens;
+
   return (
     <Layout>
       <div className="pt-20 md:pt-24 min-h-screen bg-background">
@@ -181,6 +243,32 @@ const CreateListing = () => {
           <p className="text-muted-foreground mb-8">
             List your item or service for rent
           </p>
+
+          {/* Token Balance Card */}
+          <div className={`rounded-xl p-4 mb-6 flex items-center justify-between ${
+            hasEnoughTokens ? "bg-secondary/10 border border-secondary/30" : "bg-destructive/10 border border-destructive/30"
+          }`}>
+            <div className="flex items-center gap-3">
+              {hasEnoughTokens ? (
+                <Coins className="w-6 h-6 text-secondary" />
+              ) : (
+                <AlertCircle className="w-6 h-6 text-destructive" />
+              )}
+              <div>
+                <p className="font-medium text-foreground">
+                  {walletLoading ? "Loading..." : `${tokenBalance} Tokens Available`}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedDuration.tokens} token(s) required for {selectedDuration.label} listing
+                </p>
+              </div>
+            </div>
+            {!hasEnoughTokens && (
+              <Button variant="teal" size="sm" asChild>
+                <Link to="/buy-tokens">Buy Tokens</Link>
+              </Button>
+            )}
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Title */}
@@ -312,6 +400,27 @@ const CreateListing = () => {
                 }
                 required
               />
+            </div>
+
+            {/* Listing Duration */}
+            <div className="space-y-2">
+              <Label>Listing Duration *</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {LISTING_DURATION_OPTIONS.map((option) => (
+                  <div
+                    key={option.days}
+                    onClick={() => setSelectedDuration(option)}
+                    className={`border rounded-xl p-4 text-center cursor-pointer transition-all ${
+                      selectedDuration.days === option.days
+                        ? "border-secondary bg-secondary/10 ring-2 ring-secondary"
+                        : "border-border hover:border-secondary/50"
+                    }`}
+                  >
+                    <p className="font-semibold text-foreground">{option.label}</p>
+                    <p className="text-sm text-secondary font-medium">{option.tokens} Token{option.tokens > 1 ? "s" : ""}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Images */}

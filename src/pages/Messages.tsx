@@ -80,6 +80,7 @@ const Messages = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [creatingConversation, setCreatingConversation] = useState(false);
   const [userNamesCache, setUserNamesCache] = useState<Record<string, string>>({});
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -245,6 +246,36 @@ const Messages = () => {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Track unread message counts per conversation
+  useEffect(() => {
+    if (!user || conversations.length === 0) return;
+
+    const messagesRef = collection(db, "messages");
+    const unreadQuery = query(
+      messagesRef,
+      where("receiverId", "==", user.uid),
+      where("read", "==", false)
+    );
+
+    const unsubscribe = onSnapshot(
+      unreadQuery,
+      (snapshot) => {
+        const counts: Record<string, number> = {};
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const convId = data.conversationId;
+          counts[convId] = (counts[convId] || 0) + 1;
+        });
+        setUnreadCounts(counts);
+      },
+      (error) => {
+        console.error("Error fetching unread counts:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user, conversations]);
 
   // Fetch actual user names for conversations (to fix "User" placeholder)
   useEffect(() => {
@@ -524,46 +555,68 @@ const Messages = () => {
                     </p>
                   </div>
                 ) : (
-                  conversations.map((conversation) => (
-                    <button
-                      key={conversation.id}
-                      onClick={() => setSelectedConversation(conversation)}
-                      className={cn(
-                        "w-full p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors text-left border-b border-border",
-                        selectedConversation?.id === conversation.id && "bg-muted"
-                      )}
-                    >
-                      {getOtherParticipantAvatar(conversation) ? (
-                        <img
-                          src={getOtherParticipantAvatar(conversation) || "/placeholder.svg"}
-                          alt=""
-                          className="w-12 h-12 rounded-full object-cover shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center shrink-0">
-                          <User className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-foreground truncate">
-                            {getOtherParticipantName(conversation)}
-                          </span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {formatTime(conversation.lastMessageAt)}
-                          </span>
-                        </div>
-                        {conversation.listingTitle && (
-                          <p className="text-xs text-primary truncate mb-1">
-                            Re: {conversation.listingTitle}
-                          </p>
+                  conversations.map((conversation) => {
+                    const unreadCount = unreadCounts[conversation.id] || 0;
+                    const hasUnread = unreadCount > 0;
+                    
+                    return (
+                      <button
+                        key={conversation.id}
+                        onClick={() => setSelectedConversation(conversation)}
+                        className={cn(
+                          "w-full p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors text-left border-b border-border",
+                          selectedConversation?.id === conversation.id && "bg-muted",
+                          hasUnread && "bg-secondary/5"
                         )}
-                        <p className="text-sm text-muted-foreground truncate">
-                          {conversation.lastMessage || "No messages yet"}
-                        </p>
-                      </div>
-                    </button>
-                  ))
+                      >
+                        <div className="relative shrink-0">
+                          {getOtherParticipantAvatar(conversation) ? (
+                            <img
+                              src={getOtherParticipantAvatar(conversation) || "/placeholder.svg"}
+                              alt=""
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                              <User className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          {hasUnread && (
+                            <span className="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-bold px-1">
+                              {unreadCount > 99 ? "99+" : unreadCount}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={cn(
+                              "truncate",
+                              hasUnread ? "font-bold text-foreground" : "font-semibold text-foreground"
+                            )}>
+                              {getOtherParticipantName(conversation)}
+                            </span>
+                            <span className={cn(
+                              "text-xs shrink-0",
+                              hasUnread ? "text-secondary font-medium" : "text-muted-foreground"
+                            )}>
+                              {formatTime(conversation.lastMessageAt)}
+                            </span>
+                          </div>
+                          {conversation.listingTitle && (
+                            <p className="text-xs text-primary truncate mb-1">
+                              Re: {conversation.listingTitle}
+                            </p>
+                          )}
+                          <p className={cn(
+                            "text-sm truncate",
+                            hasUnread ? "text-foreground font-medium" : "text-muted-foreground"
+                          )}>
+                            {conversation.lastMessage || "No messages yet"}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </div>

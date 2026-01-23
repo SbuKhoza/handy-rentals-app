@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Plus, LogOut, User, Wallet } from "lucide-react";
+import { Menu, X, Plus, LogOut, User, Wallet, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { toast } from "sonner";
 
 const Header = () => {
@@ -13,6 +14,7 @@ const Header = () => {
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
   const { user, logout } = useAuth();
+  const { unreadCount } = useUnreadMessages();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -92,6 +94,21 @@ const Header = () => {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
+                <Link
+                  to="/messages"
+                  className={cn(
+                    "relative flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-secondary",
+                    isHome ? "text-white/80 hover:text-white" : "text-muted-foreground"
+                  )}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Messages
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-5 h-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold px-1">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
                 <Link
                   to="/wallet"
                   className={cn(
@@ -204,6 +221,19 @@ const Header = () => {
                       <span className="font-medium">
                         {user.displayName || user.email?.split("@")[0]}
                       </span>
+                    </Link>
+                    <Link
+                      to="/messages"
+                      className="relative flex items-center gap-2 py-2 text-foreground"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                      <span className="font-medium">Messages</span>
+                      {unreadCount > 0 && (
+                        <span className="min-w-5 h-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold px-1">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
                     </Link>
                     <Link
                       to="/wallet"

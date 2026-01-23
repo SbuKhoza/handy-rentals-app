@@ -32,6 +32,7 @@ import {
   getDocs,
   or,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 
 interface Message {
@@ -294,6 +295,34 @@ const Messages = () => {
     }
   }, [ownerId, listingId, user, loading]);
 
+  // Mark messages as read
+  const markMessagesAsRead = async (conversationId: string) => {
+    if (!user) return;
+
+    try {
+      const messagesRef = collection(db, "messages");
+      const unreadQuery = query(
+        messagesRef,
+        where("conversationId", "==", conversationId),
+        where("receiverId", "==", user.uid),
+        where("read", "==", false)
+      );
+
+      const snapshot = await getDocs(unreadQuery);
+      
+      if (snapshot.empty) return;
+
+      const batch = writeBatch(db);
+      snapshot.forEach((docSnap) => {
+        batch.update(docSnap.ref, { read: true });
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+    }
+  };
+
   // Real-time listener for messages in selected conversation
   useEffect(() => {
     if (!selectedConversation) {
@@ -322,6 +351,9 @@ const Messages = () => {
           return aTime - bTime;
         });
         setMessages(msgs);
+
+        // Mark messages as read when conversation is viewed
+        markMessagesAsRead(selectedConversation.id);
       },
       (error) => {
         console.error("Error fetching messages:", error);
@@ -329,7 +361,7 @@ const Messages = () => {
     );
 
     return () => unsubscribe();
-  }, [selectedConversation]);
+  }, [selectedConversation, user]);
 
   // Send message
   const sendMessage = async () => {

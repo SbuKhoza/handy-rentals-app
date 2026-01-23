@@ -1,5 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { 
+'use client';
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import {
   User,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -7,7 +15,7 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
-  updateProfile
+  updateProfile,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -70,9 +78,5 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

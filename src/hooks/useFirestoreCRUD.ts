@@ -37,31 +37,16 @@ export function useFirestoreCRUD<T extends BaseDocument>({
 }: UseFirestoreCRUDOptions) {
   const collectionRef = collection(db, collectionName);
 
-  // Ensure collection exists by checking/creating a metadata document
-  const ensureCollectionExists = async () => {
-    const metaDocRef = doc(db, collectionName, "_metadata");
-    const metaDoc = await getDoc(metaDocRef);
-    
-    if (!metaDoc.exists()) {
-      await setDoc(metaDocRef, {
-        createdAt: Timestamp.now(),
-        collectionName,
-        description: `Auto-created collection for ${collectionName}`,
-      });
-    }
-  };
-
   // Get all documents with optional query constraints
   const getAll = async (constraints: QueryConstraint[] = []): Promise<T[]> => {
-    await ensureCollectionExists();
-    
-    const q = constraints.length > 0 
-      ? query(collectionRef, ...constraints)
-      : query(collectionRef);
-    
+    const q =
+      constraints.length > 0
+        ? query(collectionRef, ...constraints)
+        : query(collectionRef);
+
     const snapshot = await getDocs(q);
     return snapshot.docs
-      .filter(doc => doc.id !== "_metadata")
+      .filter((doc) => doc.id !== "_metadata")
       .map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -72,9 +57,9 @@ export function useFirestoreCRUD<T extends BaseDocument>({
   const getById = async (id: string): Promise<T | null> => {
     const docRef = doc(db, collectionName, id);
     const snapshot = await getDoc(docRef);
-    
+
     if (!snapshot.exists()) return null;
-    
+
     return {
       id: snapshot.id,
       ...snapshot.data(),
@@ -83,14 +68,12 @@ export function useFirestoreCRUD<T extends BaseDocument>({
 
   // Create new document
   const create = async (data: Omit<T, "id">): Promise<string> => {
-    await ensureCollectionExists();
-    
     const docData = {
       ...data,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
-    
+
     const docRef = await addDoc(collectionRef, docData);
     return docRef.id;
   };
@@ -110,16 +93,33 @@ export function useFirestoreCRUD<T extends BaseDocument>({
     await deleteDoc(docRef);
   };
 
-  // Set document with specific ID
-  const set = async (id: string, data: Omit<T, "id">): Promise<void> => {
-    await ensureCollectionExists();
-    
+  // Set document with specific ID (creates or overwrites)
+  const set = async (
+    id: string,
+    data: Omit<T, "id">,
+    options?: { merge?: boolean }
+  ): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    await setDoc(docRef, {
-      ...data,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
+    const existingDoc = await getDoc(docRef);
+
+    if (existingDoc.exists() && options?.merge !== false) {
+      // Update existing document, preserve createdAt
+      await setDoc(
+        docRef,
+        {
+          ...data,
+          updatedAt: Timestamp.now(),
+        },
+        { merge: true }
+      );
+    } else {
+      // Create new document
+      await setDoc(docRef, {
+        ...data,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+    }
   };
 
   return {
@@ -129,6 +129,5 @@ export function useFirestoreCRUD<T extends BaseDocument>({
     update,
     remove,
     set,
-    ensureCollectionExists,
   };
 }

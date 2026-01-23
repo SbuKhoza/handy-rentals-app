@@ -30,9 +30,9 @@ declare global {
 }
 
 const TOKEN_PACKAGES: TokenPackage[] = [
-  { id: "starter", tokens: 10, price: 1000 },
-  { id: "popular", tokens: 50, price: 4500, popular: true },
-  { id: "value", tokens: 100, price: 8000 },
+  { id: "starter", tokens: 10, price: 50 },
+  { id: "popular", tokens: 50, price: 200, popular: true },
+  { id: "value", tokens: 100, price: 350 },
 ];
 
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
@@ -57,7 +57,9 @@ const BuyTokens = () => {
     document.body.appendChild(script);
 
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
   }, []);
 
@@ -71,13 +73,53 @@ const BuyTokens = () => {
           setWalletBalance(wallet.balance);
         }
       } catch (error) {
-        console.error("Error fetching wallet:", error);
+        // Wallet doesn't exist yet - this is fine for new users
+        console.log("Wallet not found, will be created on first purchase");
       }
     };
     fetchWallet();
   }, [user]);
 
-  const handlePayment = async () => {
+  const creditTokensAfterPayment = async (reference: string, tokensToCredit: number) => {
+    if (!user) return;
+    
+    try {
+      // Get or create wallet
+      let wallet = await walletApi.getById(user.uid);
+      
+      if (!wallet) {
+        // Create new wallet
+        await walletApi.set(user.uid, {
+          userId: user.uid,
+          balance: tokensToCredit,
+        });
+      } else {
+        // Update existing wallet
+        await walletApi.update(user.uid, {
+          balance: wallet.balance + tokensToCredit,
+        });
+      }
+
+      // Record transaction
+      await transactionsApi.create({
+        userId: user.uid,
+        type: "credit",
+        amount: tokensToCredit,
+        description: `Token Purchase - ${tokensToCredit} tokens`,
+        reference: reference,
+      });
+
+      toast.success(`Successfully purchased ${tokensToCredit} tokens!`);
+      setWalletBalance((prev) => prev + tokensToCredit);
+      setSelectedPackage(null);
+    } catch (error) {
+      console.error("Error crediting tokens:", error);
+      toast.error("Payment received but failed to credit tokens. Please contact support.");
+    }
+    setLoading(false);
+  };
+
+  const handlePayment = () => {
     if (!user || !selectedPackage || !paystackLoaded) {
       toast.error("Please select a package and ensure you're logged in");
       return;
@@ -86,50 +128,19 @@ const BuyTokens = () => {
     setLoading(true);
 
     const reference = `TOK_${user.uid}_${Date.now()}`;
+    const tokensToCredit = selectedPackage.tokens;
 
     try {
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_PUBLIC_KEY,
         email: user.email || "",
         amount: selectedPackage.price * 100, // Paystack expects amount in kobo
-        currency: "NGN",
+        currency: "ZAR",
         ref: reference,
-        callback: async (response) => {
+        callback: (response) => {
           // Payment successful - credit tokens
-          try {
-            // Get or create wallet
-            let wallet = await walletApi.getById(user.uid);
-            
-            if (!wallet) {
-              // Create new wallet
-              await walletApi.set(user.uid, {
-                userId: user.uid,
-                balance: selectedPackage.tokens,
-              });
-            } else {
-              // Update existing wallet
-              await walletApi.update(user.uid, {
-                balance: wallet.balance + selectedPackage.tokens,
-              });
-            }
-
-            // Record transaction
-            await transactionsApi.create({
-              userId: user.uid,
-              type: "credit",
-              amount: selectedPackage.tokens,
-              description: `Token Purchase - ${selectedPackage.tokens} tokens`,
-              reference: response.reference,
-            });
-
-            toast.success(`Successfully purchased ${selectedPackage.tokens} tokens!`);
-            setWalletBalance((prev) => prev + selectedPackage.tokens);
-            setSelectedPackage(null);
-          } catch (error) {
-            console.error("Error crediting tokens:", error);
-            toast.error("Payment received but failed to credit tokens. Please contact support.");
-          }
-          setLoading(false);
+          // Use a non-async wrapper to handle the async operation
+          creditTokensAfterPayment(response.reference, tokensToCredit);
         },
         onClose: () => {
           setLoading(false);
@@ -220,9 +231,9 @@ const BuyTokens = () => {
                     </div>
                     <p className="text-3xl font-bold text-foreground">{pkg.tokens}</p>
                     <p className="text-muted-foreground mb-4">Tokens</p>
-                    <p className="text-2xl font-bold text-secondary">₦{pkg.price.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-secondary">R{pkg.price.toLocaleString()}</p>
                     <p className="text-sm text-muted-foreground">
-                      ₦{(pkg.price / pkg.tokens).toFixed(0)} per token
+                      R{(pkg.price / pkg.tokens).toFixed(0)} per token
                     </p>
                   </div>
 
@@ -284,7 +295,7 @@ const BuyTokens = () => {
               <>
                 <CreditCard className="w-5 h-5 mr-2" />
                 {selectedPackage
-                  ? `Pay ₦${selectedPackage.price.toLocaleString()}`
+                  ? `Pay R${selectedPackage.price.toLocaleString()}`
                   : "Select a Package"}
               </>
             )}

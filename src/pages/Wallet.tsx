@@ -1,3 +1,5 @@
+'use client';
+
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,18 +71,18 @@ const Wallet = () => {
               <div className="border border-border rounded-xl p-4 text-center hover:border-secondary transition-colors cursor-pointer">
                 <p className="text-2xl font-bold text-foreground">10</p>
                 <p className="text-xs text-muted-foreground mb-2">Tokens</p>
-                <p className="text-sm font-semibold text-secondary">₦1,000</p>
+                <p className="text-sm font-semibold text-secondary">R50</p>
               </div>
               <div className="border-2 border-secondary rounded-xl p-4 text-center relative cursor-pointer bg-secondary/5">
                 <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full">Popular</span>
                 <p className="text-2xl font-bold text-foreground">50</p>
                 <p className="text-xs text-muted-foreground mb-2">Tokens</p>
-                <p className="text-sm font-semibold text-secondary">₦4,500</p>
+                <p className="text-sm font-semibold text-secondary">R200</p>
               </div>
               <div className="border border-border rounded-xl p-4 text-center hover:border-secondary transition-colors cursor-pointer">
                 <p className="text-2xl font-bold text-foreground">100</p>
                 <p className="text-xs text-muted-foreground mb-2">Tokens</p>
-                <p className="text-sm font-semibold text-secondary">₦8,000</p>
+                <p className="text-sm font-semibold text-secondary">R350</p>
               </div>
             </div>
           </div>
